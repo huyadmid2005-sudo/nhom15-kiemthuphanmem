@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # HSM - Healthcare Management System
 
 HSM là hệ thống quản lý chăm sóc sức khỏe theo kiến trúc microservices. Dự án bao gồm frontend React/Vite, API Gateway, các service Spring Boot, MySQL, Redis, Eureka, Config Server, Zipkin và một seeder riêng để tạo dữ liệu test/demo.
@@ -362,6 +361,3 @@ cd doctor-service
 - Dữ liệu test/demo nên thêm qua `test-data-seeder` hoặc API rõ ràng, tránh ghi trực tiếp xuyên database của service khác.
 - Với production, không đưa server secret xuống frontend; hãy chuyển sang backend token generation flow.
 =======
-# nhom15-kiemthuphanmem
-github chung của nhóm 
->>>>>>> 43083d696c72613960ef806ed2bc890085ac207a
