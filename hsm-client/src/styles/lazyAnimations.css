@@ -1,0 +1,353 @@
+/* =====================================================
+   LAZY LOADING ANIMATIONS - PERFORMANCE OPTIMIZED
+   ===================================================== */
+
+/* Base lazy section styles */
+.lazy-section {
+  /* Performance optimizations */
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  perspective: 1000px;
+
+  /* Use CSS custom properties for dynamic values */
+  --animation-duration: 0.8s;
+  --animation-delay: 0s;
+  --animation-timing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hidden state - before intersection */
+.lazy-section--hidden {
+  opacity: 0;
+  /* Prevent layout shifts by maintaining transform origin */
+  transform-origin: center;
+}
+
+/* Visible state - after intersection */
+.lazy-section--visible {
+  opacity: 1;
+  animation-duration: var(--animation-duration);
+  animation-delay: var(--animation-delay);
+  animation-timing-function: var(--animation-timing);
+  animation-fill-mode: both;
+}
+
+/* Ensure section headers are visible */
+.lazy-section--visible .section-header {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.lazy-section--visible .section-header h2,
+.lazy-section--visible .section-header p {
+  opacity: 1 !important;
+  color: inherit !important;
+}
+
+/* Fix for hidden headers in animations */
+.section-header {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* =====================================================
+   ANIMATION TYPES
+   ===================================================== */
+
+/* Fade In Up */
+.lazy-section--fadeInUp {
+  animation-name: fadeInUp;
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 30px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Fade In Down */
+.lazy-section--fadeInDown {
+  animation-name: fadeInDown;
+}
+
+@keyframes fadeInDown {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -30px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Fade In Left */
+.lazy-section--fadeInLeft {
+  animation-name: fadeInLeft;
+}
+
+@keyframes fadeInLeft {
+  0% {
+    opacity: 0;
+    transform: translate3d(-30px, 0, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Fade In Right */
+.lazy-section--fadeInRight {
+  animation-name: fadeInRight;
+}
+
+@keyframes fadeInRight {
+  0% {
+    opacity: 0;
+    transform: translate3d(30px, 0, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Scale In */
+.lazy-section--scaleIn {
+  animation-name: scaleIn;
+}
+
+@keyframes scaleIn {
+  0% {
+    opacity: 0;
+    transform: scale3d(0.95, 0.95, 1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+/* Slide In Up */
+.lazy-section--slideInUp {
+  animation-name: slideInUp;
+}
+
+@keyframes slideInUp {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 100%, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Slide In Down */
+.lazy-section--slideInDown {
+  animation-name: slideInDown;
+}
+
+@keyframes slideInDown {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -100%, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Rotate In */
+.lazy-section--rotateIn {
+  animation-name: rotateIn;
+}
+
+@keyframes rotateIn {
+  0% {
+    opacity: 0;
+    transform: rotate3d(0, 0, 1, -15deg);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate3d(0, 0, 1, 0deg);
+  }
+}
+
+/* =====================================================
+   PLACEHOLDER STYLES
+   ===================================================== */
+
+.lazy-section__placeholder {
+  background: linear-gradient(
+    90deg,
+    rgba(240, 240, 240, 0.8) 25%,
+    rgba(220, 220, 220, 0.8) 50%,
+    rgba(240, 240, 240, 0.8) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite ease-in-out;
+  border-radius: 8px;
+  min-height: 200px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* =====================================================
+   STAGGERED ANIMATIONS FOR CHILD ELEMENTS
+   ===================================================== */
+
+/* Stagger children animations */
+.lazy-section--visible > *:nth-child(1) {
+  animation-delay: calc(var(--animation-delay) + 0.1s);
+}
+.lazy-section--visible > *:nth-child(2) {
+  animation-delay: calc(var(--animation-delay) + 0.2s);
+}
+.lazy-section--visible > *:nth-child(3) {
+  animation-delay: calc(var(--animation-delay) + 0.3s);
+}
+.lazy-section--visible > *:nth-child(4) {
+  animation-delay: calc(var(--animation-delay) + 0.4s);
+}
+.lazy-section--visible > *:nth-child(5) {
+  animation-delay: calc(var(--animation-delay) + 0.5s);
+}
+.lazy-section--visible > *:nth-child(6) {
+  animation-delay: calc(var(--animation-delay) + 0.6s);
+}
+
+/* Grid items specific staggering */
+.lazy-section--visible .grid-item:nth-child(odd) {
+  animation-delay: calc(var(--animation-delay) + 0.1s);
+}
+
+.lazy-section--visible .grid-item:nth-child(even) {
+  animation-delay: calc(var(--animation-delay) + 0.2s);
+}
+
+/* Service cards staggering */
+.lazy-section--visible .service-card {
+  animation: fadeInUp var(--animation-duration) var(--animation-timing) both;
+}
+
+.lazy-section--visible .service-card:nth-child(1) {
+  animation-delay: calc(var(--animation-delay) + 0.1s);
+}
+.lazy-section--visible .service-card:nth-child(2) {
+  animation-delay: calc(var(--animation-delay) + 0.2s);
+}
+.lazy-section--visible .service-card:nth-child(3) {
+  animation-delay: calc(var(--animation-delay) + 0.3s);
+}
+.lazy-section--visible .service-card:nth-child(4) {
+  animation-delay: calc(var(--animation-delay) + 0.4s);
+}
+.lazy-section--visible .service-card:nth-child(5) {
+  animation-delay: calc(var(--animation-delay) + 0.5s);
+}
+.lazy-section--visible .service-card:nth-child(6) {
+  animation-delay: calc(var(--animation-delay) + 0.6s);
+}
+
+/* Feature items staggering */
+.lazy-section--visible .feature-item {
+  animation: fadeInUp var(--animation-duration) var(--animation-timing) both;
+}
+
+.lazy-section--visible .feature-item:nth-child(1) {
+  animation-delay: calc(var(--animation-delay) + 0.1s);
+}
+.lazy-section--visible .feature-item:nth-child(2) {
+  animation-delay: calc(var(--animation-delay) + 0.2s);
+}
+.lazy-section--visible .feature-item:nth-child(3) {
+  animation-delay: calc(var(--animation-delay) + 0.3s);
+}
+.lazy-section--visible .feature-item:nth-child(4) {
+  animation-delay: calc(var(--animation-delay) + 0.4s);
+}
+
+/* Stats staggering */
+.lazy-section--visible .stat-item {
+  animation: scaleIn var(--animation-duration) var(--animation-timing) both;
+}
+
+.lazy-section--visible .stat-item:nth-child(1) {
+  animation-delay: calc(var(--animation-delay) + 0.1s);
+}
+.lazy-section--visible .stat-item:nth-child(2) {
+  animation-delay: calc(var(--animation-delay) + 0.2s);
+}
+.lazy-section--visible .stat-item:nth-child(3) {
+  animation-delay: calc(var(--animation-delay) + 0.3s);
+}
+.lazy-section--visible .stat-item:nth-child(4) {
+  animation-delay: calc(var(--animation-delay) + 0.4s);
+}
+
+/* =====================================================
+   RESPONSIVE ADJUSTMENTS
+   ===================================================== */
+
+@media (max-width: 768px) {
+  .lazy-section {
+    --animation-duration: 0.6s;
+  }
+
+  /* Reduce stagger delays on mobile for faster feel */
+  .lazy-section--visible > *:nth-child(n) {
+    animation-delay: calc(
+      var(--animation-delay) + 0.05s * var(--stagger-index, 1)
+    );
+  }
+}
+
+/* =====================================================
+   ACCESSIBILITY & PERFORMANCE
+   ===================================================== */
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .lazy-section,
+  .lazy-section--visible,
+  .lazy-section--visible * {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .lazy-section--hidden {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .lazy-section__placeholder {
+    animation: none !important;
+  }
+}
+
+/* Performance optimization for devices with limited resources */
+@media (max-width: 480px) and (max-height: 800px) {
+  .lazy-section {
+    will-change: auto;
+  }
+
+  .lazy-section__placeholder {
+    animation-duration: 2s;
+  }
+}

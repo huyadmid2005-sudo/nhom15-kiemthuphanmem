@@ -1,0 +1,53 @@
+package com.vuong.patientservice.security;
+
+import com.vuong.patientservice.constants.AppConstants;
+import jakarta.ws.rs.HttpMethod;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+@Configuration
+@EnableWebSecurity
+public class WebSecurityConfig {
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
+    }
+    @Bean
+    public BCryptPasswordEncoder bCryptPasswordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http, AuthenticationManager authenticationManager)
+            throws Exception {
+        http
+                // CORS is handled by API Gateway — do NOT add here to avoid duplicate headers
+                .cors(AbstractHttpConfigurer::disable)
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> {
+                    auth
+                            .requestMatchers(HttpMethod.POST, "/patients/register").permitAll()
+                            .requestMatchers(HttpMethod.POST, "/patients/login").permitAll()
+                            .requestMatchers(HttpMethod.DELETE, "/patients/delete/**").hasAuthority(AppConstants.ROLE_ADMIN)
+                            .requestMatchers(HttpMethod.GET, "/patients/**").hasAnyAuthority(AppConstants.ROLE_ADMIN, AppConstants.ROLE_DOCTOR, AppConstants.ROLE_PATIENT)
+                            .requestMatchers(HttpMethod.POST, "/patients/**").hasAnyAuthority(AppConstants.ROLE_ADMIN, AppConstants.ROLE_DOCTOR, AppConstants.ROLE_PATIENT)
+                            .requestMatchers(HttpMethod.PUT, "/patients/**").hasAnyAuthority(AppConstants.ROLE_ADMIN, AppConstants.ROLE_DOCTOR, AppConstants.ROLE_PATIENT)
+                            .requestMatchers(HttpMethod.DELETE, "/patients/**").hasAnyAuthority(AppConstants.ROLE_ADMIN, AppConstants.ROLE_DOCTOR, AppConstants.ROLE_PATIENT)
+                            .anyRequest().permitAll();
+                })
+                .addFilterBefore(new CustomAuthorizationFilter(), UsernamePasswordAuthenticationFilter.class)
+        ;
+        return http.build();
+    }
+}
+

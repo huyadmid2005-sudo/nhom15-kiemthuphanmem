@@ -1,0 +1,319 @@
+version: "3.9"
+
+x-env-common: &env-common
+  SPRING_CONFIG_IMPORT: ${SPRING_CONFIG_IMPORT}
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE}
+  MYSQL_URL_JDBC: ${MYSQL_URL_JDBC}
+  SPRING_CLOUD_CONFIG_FAIL_FAST: "true"
+  SPRING_CLOUD_CONFIG_RETRY_MAX_ATTEMPTS: "12"
+  SPRING_CLOUD_CONFIG_RETRY_INITIAL_INTERVAL: "2000"
+  MYSQL_ACCOUNT: ${MYSQL_ACCOUNT}
+  #redis
+  REDIS_URL: ${REDIS_URL}
+  SPRING_DATA_REDIS_HOST: ${SPRING_DATA_REDIS_HOST}
+  SPRING_DATA_REDIS_PORT: "${SPRING_DATA_REDIS_PORT}"
+  # ==== JWT (shared across secured services) ====
+  JWT_TOKEN_SECRET: ${JWT_TOKEN_SECRET}
+  # ==== Tracing to Zipkin (Spring Boot 3 / Micrometer Tracing) ====
+  MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT}
+  MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "${MANAGEMENT_TRACING_SAMPLING_PROBABILITY}"
+
+x-depends-common: &depends-common
+  config-server:
+    condition: service_healthy
+  eureka-service-discovery:
+    condition: service_healthy
+
+networks:
+  hms-net:
+
+volumes:
+  mysql_data:
+  redis_data:
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    command: --default-authentication-plugin=mysql_native_password --lower_case_table_names=1 --sql-mode="STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports: [ "3306:3306" ]
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks: [hms-net]
+
+  zipkin:
+    image: openzipkin/zipkin:2.23
+    container_name: zipkin
+    ports: [ "9411:9411" ]
+    environment:
+      - STORAGE_TYPE=mysql
+      - MYSQL_HOST=mysql
+      - MYSQL_TCP_PORT=3306
+      - MYSQL_DB=zipkin
+      - MYSQL_USER=${ZIPKIN_MYSQL_USER}
+      - MYSQL_PASS=${ZIPKIN_MYSQL_PASS}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:9411/health | grep -q 'UP' || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    networks: [ hms-net ]
+
+  redis:
+    image: redis/redis-stack-server:latest
+    container_name: redis
+#    ports: [ "6379:6379" ]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli -h 127.0.0.1 -p 6379 ping | grep -q PONG" ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    networks: [ hms-net ]
+
+  # Eureka STARTS FIRST
+  eureka-service-discovery:
+    build:
+      context: ./eureka-service-discovery
+      dockerfile: Dockerfile
+    container_name: eureka-service-discovery
+    environment:
+      SPRING_APPLICATION_NAME: eureka-service-discovery
+      SERVER_PORT: 8761
+    ports: [ "8761:8761" ]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    networks: [hms-net]
+
+  config-server:
+    build:
+      context: ./config-server
+      dockerfile: Dockerfile
+    container_name: config-server
+    environment:
+      SERVER_PORT: 8888
+      SPRING_PROFILES_ACTIVE: native
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:/config-repo
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-service-discovery:8761/eureka
+    volumes:
+      - ./config-repo:/config-repo:ro
+    ports: [ "8888:8888" ]
+    depends_on:
+      eureka-service-discovery:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8888/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    networks: [hms-net]
+
+  api-gateway:
+    build: { context: ./api-gateway, dockerfile: Dockerfile }
+    container_name: api-gateway
+    environment:
+      <<: *env-common
+      SPRING_APPLICATION_NAME: api-gateway
+      SERVER_PORT: 8090
+      HEALTH_CHATBOT_URI: http://health-chatbot:8000
+    depends_on:
+      <<: *depends-common
+      health-chatbot:
+        condition: service_healthy
+    ports: [ "8090:8090" ]
+    networks: [hms-net]
+
+  patient-service:
+    build: { context: ./patient-service, dockerfile: Dockerfile }
+    container_name: patient-service
+    environment:
+      <<: *env-common
+      SPRING_APPLICATION_NAME: patient-service
+      SERVER_PORT: 8092
+    depends_on:
+      <<: *depends-common
+      mysql:
+        condition: service_healthy
+    ports: [ "8092:8092" ]
+    networks: [hms-net]
+
+  doctor-service:
+    build: { context: ./doctor-service, dockerfile: Dockerfile }
+    container_name: doctor-service
+    environment:
+      <<: *env-common
+      SPRING_APPLICATION_NAME: doctor-service
+      SERVER_PORT: 8093
+    depends_on:
+      <<: *depends-common
+      mysql:
+        condition: service_healthy
+    ports: [ "8093:8093" ]
+    networks: [hms-net]
+
+  notification-service:
+    build: { context: ./notification-service, dockerfile: Dockerfile }
+    container_name: notification-service
+    environment:
+      <<: *env-common
+      SPRING_APPLICATION_NAME: notification-service
+      SERVER_PORT: 8097
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+    depends_on:
+      <<: *depends-common
+      mysql:
+        condition: service_healthy
+    ports: [ "8097:8097" ]
+    networks: [hms-net]
+
+  community-portal-service:
+    build: { context: ./community-portal-service, dockerfile: Dockerfile }
+    container_name: community-portal-service
+    environment:
+      <<: *env-common
+      SPRING_APPLICATION_NAME: community-portal-service
+      SERVER_PORT: 8094
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+    depends_on: *depends-common
+    ports: [ "8094:8094" ]
+    networks: [hms-net]
+
+  analytic-research-service:
+    build: { context: ./analytic-research-service, dockerfile: Dockerfile }
+    container_name: analytic-research-service
+    environment:
+      <<: *env-common
+      SPRING_APPLICATION_NAME: analytic-research-service
+      SERVER_PORT: 8098
+    depends_on:
+      <<: *depends-common
+      mysql:
+        condition: service_healthy
+    ports: [ "8098:8098" ]
+    networks: [hms-net]
+
+  cdss-service:
+    build: { context: ./cdss-service, dockerfile: Dockerfile }
+    container_name: cdss-service
+    environment:
+      <<: *env-common
+      SPRING_APPLICATION_NAME: cdss-service
+      SERVER_PORT: 8095
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL}
+      OPENAI_API_URL: ${OPENAI_API_URL}
+    depends_on:
+      <<: *depends-common
+      mysql:
+        condition: service_healthy
+    ports: [ "8095:8095" ]
+    networks: [hms-net]
+
+  health-chatbot:
+    build: { context: ./health-chatbot-main, dockerfile: Dockerfile }
+    container_name: health-chatbot
+    environment:
+      HMS_PATIENT_PROFILE_URL: http://patient-service:8092/patients/profile
+      HMS_PATIENT_HEALTH_RECORDS_URL: http://patient-service:8092/patients/health-records/patient/{patient_id}
+      HMS_CHATBOT_VERIFY_PATIENT_ID: "true"
+    depends_on:
+      patient-service:
+        condition: service_started
+    ports: [ "8000:8000" ]
+    healthcheck:
+      test: [ "CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()\"" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [hms-net]
+
+  pharmaceutical-inventory-service:
+    build: { context: ./pharmaceutical-inventory-service, dockerfile: Dockerfile }
+    container_name: pharmaceutical-inventory-service
+    environment:
+      <<: *env-common
+      SPRING_APPLICATION_NAME: pharmaceutical-inventory-service
+      SERVER_PORT: 8096
+    depends_on:
+      <<: *depends-common
+      mysql:
+        condition: service_healthy
+    ports: [ "8096:8096" ]
+    networks: [hms-net]
+
+  security-service:
+    build: { context: ./security-service, dockerfile: Dockerfile }
+    container_name: security-service
+    environment:
+      <<: *env-common
+      SPRING_APPLICATION_NAME: security-service
+      SERVER_PORT: 8091
+      FRONTEND_URL: ${FRONTEND_URL}
+    depends_on: *depends-common
+    ports: [ "8091:8091" ]
+    networks: [hms-net]
+
+  hsm-client:
+    build:
+      context: ./hsm-client
+      dockerfile: Dockerfile
+      args:
+        VITE_APP_ENV: ${VITE_APP_ENV}
+        VITE_API_BASE_URL_DEV: ${VITE_API_BASE_URL_DEV}
+        VITE_API_BASE_URL_PROD: ${VITE_API_BASE_URL_PROD}
+        VITE_FORCE_ENV: ${VITE_FORCE_ENV:-}
+        VITE_ZEGO_APP_ID: ${VITE_ZEGO_APP_ID}
+        VITE_ZEGO_SERVER_SECRET: ${VITE_ZEGO_SERVER_SECRET}
+    container_name: hsm-client
+    depends_on:
+      - api-gateway
+    ports: [ "${HSM_CLIENT_PORT:-5173}:80" ]
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://127.0.0.1/health | grep -q ok || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [hms-net]
+
+  test-data-seeder:
+    profiles: [ "seed" ]
+    build:
+      context: ./test-data-seeder
+      dockerfile: Dockerfile
+    container_name: test-data-seeder
+    environment:
+      SEEDER_API_BASE_URL: ${SEEDER_API_BASE_URL:-http://api-gateway:8090}
+      SEEDER_ADMIN_EMAIL: ${SEEDER_ADMIN_EMAIL:-admin.seed@hsm.test}
+      SEEDER_DEFAULT_PASSWORD: ${SEEDER_DEFAULT_PASSWORD:-Test@12345}
+      SEEDER_REQUEST_TIMEOUT_SECONDS: "${SEEDER_REQUEST_TIMEOUT_SECONDS:-10}"
+      SEEDER_MAX_WAIT_SECONDS: "${SEEDER_MAX_WAIT_SECONDS:-180}"
+      SEEDER_RETRY_SECONDS: "${SEEDER_RETRY_SECONDS:-5}"
+    depends_on:
+      - api-gateway
+      - security-service
+      - patient-service
+      - doctor-service
+    networks: [hms-net]

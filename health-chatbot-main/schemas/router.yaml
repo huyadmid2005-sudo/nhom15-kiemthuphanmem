@@ -1,0 +1,50 @@
+bmi_classification_keywords:
+- gầy
+- béo
+- thừa cân
+- overweight
+- underweight
+- obese
+- béo phì
+greeting_synonyms:
+- xin chao
+- chao
+- chao ban
+- hello
+- hi
+- alo
+lab_summary_synonyms:
+- tong hop loi khuyen ve xet nghiem
+- tong hop xet nghiem
+- tom tat xet nghiem
+- ket luan xet nghiem
+- tong hop loi khuyen xet nghiem
+- tong hop loi khuyen
+health_overview_synonyms:
+- tinh trang cua toi
+- tinh trang suc khoe cua toi
+- suc khoe cua toi
+- suc khoe toi nhu the nao
+- tinh trang cua toi nhu the nao
+- toi co khoe khong
+- danh gia suc khoe cua toi
+- tong quan suc khoe
+- tong quan ho so suc khoe
+- ket qua suc khoe cua toi
+- ho so suc khoe cua toi
+visit_history_synonyms:
+- toi dang co may lan kham
+- toi da kham may lan
+- toi da kham bao nhieu lan
+- may lan kham
+- bao nhieu lan kham
+- kham bao nhieu lan
+- so lan kham
+- so lan di kham
+- lich su kham
+- cac lan kham
+- nhung lan kham
+- danh sach lan kham
+- lan kham gan nhat
+- ngay kham gan nhat
+- kham nhung ngay nao

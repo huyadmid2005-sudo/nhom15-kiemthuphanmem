@@ -1,0 +1,220 @@
+import "./datatable.scss";
+import { DataGrid } from "@mui/x-data-grid";
+import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import axiosInstancePatientService from "../../../utils/axiosInstancePatientService";
+import { toast } from "react-toastify";
+import HealthRecordForm from "../health-record/HealthRecordForm";
+
+const Datatable = () => {
+  const [patientsList, setPatientsList] = useState([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showHealthRecordForm, setShowHealthRecordForm] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+
+  const approvePatient = (patientId) => {
+    axiosInstancePatientService
+      .post(`/approve/${patientId}`)
+      .then(() => {
+        toast.success("Patient approved successfully!");
+        setRefreshKey((oldKey) => oldKey + 1);
+      })
+      .catch((err) => {
+        console.error("Error approving patient:", err);
+        toast.error("Error approving patient");
+      });
+  };
+
+  const handleAddHealthRecord = (patient) => {
+    setSelectedPatient(patient);
+    setShowHealthRecordForm(true);
+  };
+
+  const handleCloseHealthRecordForm = () => {
+    setShowHealthRecordForm(false);
+    setSelectedPatient(null);
+  };
+
+  const handleHealthRecordSuccess = () => {
+    toast.success("Health record added successfully!");
+  };
+
+  //Columns for the data grid
+  const columns = [
+    { field: "patientId", headerName: "Patient ID", width: 80 },
+    { field: "email", headerName: "Email", width: 140 },
+    { field: "firstName", headerName: "First Name", width: 80 },
+    { field: "lastName", headerName: "Last Name", width: 80 },
+    { field: "dateOfBirth", headerName: "Date of Birth", width: 120 },
+    { field: "gender", headerName: "Gender", width: 80 },
+    { field: "bloodGroup", headerName: "Blood Group", width: 100 },
+    { field: "phoneNumber", headerName: "Phone Number", width: 130 },
+    // { field: "address", headerName: "Address", width: 150 },
+    {
+      field: "approved",
+      headerName: "Status",
+      width: 130,
+      renderCell: (params) => {
+        return params.value ? "Approved" : "Not Approved";
+      },
+    },
+    {
+      field: "view",
+      headerName: "Action",
+      sortable: false,
+      width: 200,
+      renderCell: (params) => {
+        const commonButtonClasses =
+          "text-white font-bold py-1 px-2 rounded text-xs mr-1";
+        if (!params.row.approved) {
+          return (
+            <div className="flex gap-1">
+              <button
+                onClick={() => approvePatient(params.row.patientId)}
+                className={`bg-green-500 hover:bg-green-700 ${commonButtonClasses}`}
+              >
+                Approve
+              </button>
+              <button
+                onClick={() => handleAddHealthRecord(params.row)}
+                className={`bg-purple-500 hover:bg-purple-700 ${commonButtonClasses}`}
+              >
+                Health Record
+              </button>
+            </div>
+          );
+        } else {
+          return (
+            <div className="flex gap-1">
+              <Link
+                to={`/admin/patient/${params.row.patientId}`}
+                className="link"
+              >
+                <button
+                  className={`bg-blue-500 hover:bg-blue-700 ${commonButtonClasses}`}
+                >
+                  View
+                </button>
+              </Link>
+              <button
+                onClick={() => handleAddHealthRecord(params.row)}
+                className={`bg-purple-500 hover:bg-purple-700 ${commonButtonClasses}`}
+              >
+                Health Record
+              </button>
+            </div>
+          );
+        }
+      },
+    },
+  ];
+
+  useEffect(() => {
+    setIsLoading(true);
+    axiosInstancePatientService
+      .get("/all")
+      .then((res) => {
+        setPatientsList(
+          res.data.map((item, index) => ({ ...item, id: index }))
+        );
+      })
+      .catch((err) => {
+        console.log(err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [refreshKey]); // Depend on refreshKey
+
+  const loadAllPatients = () => {
+    setIsLoading(true);
+    axiosInstancePatientService
+      .get("/all")
+      .then((res) => {
+        setPatientsList(
+          res.data.map((item, index) => ({ ...item, id: index }))
+        );
+      })
+      .catch((err) => console.log(err))
+      .finally(() => setIsLoading(false));
+  };
+
+  const loadApprovedPatients = () => {
+    setIsLoading(true);
+    axiosInstancePatientService
+      .get("/all/approved")
+      .then((res) => {
+        setPatientsList(
+          res.data.map((item, index) => ({ ...item, id: index }))
+        );
+      })
+      .catch((err) => console.log(err))
+      .finally(() => setIsLoading(false));
+  };
+
+  const loadUnapprovedPatients = () => {
+    setIsLoading(true);
+    axiosInstancePatientService
+      .get("/all/unapproved")
+      .then((res) => {
+        setPatientsList(
+          res.data.map((item, index) => ({ ...item, id: index }))
+        );
+      })
+      .catch((err) => console.log(err))
+      .finally(() => setIsLoading(false));
+  };
+
+  return (
+    <div className="datatable">
+      <div className="flex justify-start my-4">
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white text-sm py-1 px-3 rounded mx-1"
+          onClick={loadAllPatients}
+        >
+          All Patients
+        </button>
+        <button
+          className="bg-green-500 hover:bg-green-700 text-white text-sm py-1 px-3 rounded mx-1"
+          onClick={loadApprovedPatients}
+        >
+          Approved Patients
+        </button>
+        <button
+          className="bg-red-500 hover:bg-red-700 text-white text-sm py-1 px-3 rounded mx-1"
+          onClick={loadUnapprovedPatients}
+        >
+          Unapproved Patients
+        </button>
+      </div>
+
+      <DataGrid
+        className="datagrid"
+        rows={patientsList}
+        columns={columns}
+        pageSize={9}
+        rowsPerPageOptions={[9]}
+        checkboxSelection
+        loading={isLoading}
+        sx={{
+          "& .MuiDataGrid-cell": {
+            padding: "0 4px",
+          },
+        }}
+      />
+
+      {/* Health Record Form Modal */}
+      {showHealthRecordForm && selectedPatient && (
+        <HealthRecordForm
+          patientId={selectedPatient.patientId}
+          patientName={`${selectedPatient.firstName} ${selectedPatient.lastName}`}
+          onClose={handleCloseHealthRecordForm}
+          onSuccess={handleHealthRecordSuccess}
+        />
+      )}
+    </div>
+  );
+};
+
+export default Datatable;

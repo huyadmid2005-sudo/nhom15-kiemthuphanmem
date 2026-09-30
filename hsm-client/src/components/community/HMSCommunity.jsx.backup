@@ -1,0 +1,694 @@
+import { useState, useEffect, useCallback } from "react";
+import axiosInstanceCommunityPortalService from "../../utils/axiosInstanceCommunityPortalService";
+import { toast } from "react-toastify";
+import axiosInstancePatientService from "../../utils/axiosInstancePatientService";
+import Navbar from "../../components/navbar/Navbar";
+import Sidebar from "../../components/sidebar/PatientSidebar";
+import CreatePostModal from "./CreatePostModal";
+import TrendingWidget from "./TrendingWidget";
+import { LoadingState, EmptyState } from "./CommunityStates";
+import "../../styles/community.css";
+import { 
+  FaHeart, 
+  FaComment, 
+  FaShare, 
+  FaBookmark, 
+  FaSearch, 
+  FaTags,
+  FaThumbsUp,
+  FaThumbsDown,
+  FaFire,
+  FaClock,
+  FaPaperPlane,
+  FaEye,
+  FaReply,
+  FaPlus
+} from "react-icons/fa";
+
+const HMSCommunity = () => {
+  const [posts, setPosts] = useState([]);
+  const [filteredPosts, setFilteredPosts] = useState([]);
+  const [popularTopics, setPopularTopics] = useState([]);
+  const [newComment, setNewComment] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [sortBy, setSortBy] = useState("newest");
+  const [showCreatePost, setShowCreatePost] = useState(false);
+  const [userProfile, setUserProfile] = useState({});
+  const [savedPosts, setSavedPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const categories = [
+    "All", "General", "Health Tips", "Mental Health", "Nutrition", 
+    "Exercise", "Medical Questions", "Support", "Success Stories"
+  ];
+
+  const voteTypes = [
+    { 
+      type: "UP_VOTE", 
+      icon: <FaThumbsUp />, 
+      label: "Upvote", 
+      color: "text-green-600", 
+      hoverColor: "hover:bg-green-50",
+      borderColor: "border-green-300"
+    },
+    { 
+      type: "DOWN_VOTE", 
+      icon: <FaThumbsDown />, 
+      label: "Downvote", 
+      color: "text-red-600", 
+      hoverColor: "hover:bg-red-50",
+      borderColor: "border-red-300"
+    }
+  ];
+
+  const voteTypes = [
+    { type: "UP_VOTE", icon: "👍", label: "Upvote", color: "text-green-600" },
+    { type: "DOWN_VOTE", icon: "�", label: "Downvote", color: "text-red-600" }
+  ];
+
+  const fetchUserProfile = useCallback(async () => {
+    try {
+      const response = await axiosInstancePatientService.get("/profile");
+      setUserProfile({
+        name: `${response.data.firstName} ${response.data.lastName}`,
+        avatar: response.data.avatar || `https://ui-avatars.com/api/?name=${response.data.firstName}+${response.data.lastName}&background=3b82f6&color=ffffff`,
+        id: response.data.id
+      });
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    }
+  }, []);
+
+  const fetchPopularTopics = useCallback(async () => {
+    try {
+      const response = await axiosInstanceCommunityPortalService.get("/topics/popular");
+      setPopularTopics(response.data);
+    } catch (error) {
+      // Fallback topics with more realistic data
+      setPopularTopics([
+        { name: "Mental Health", count: 45, growth: 12 },
+        { name: "Exercise Tips", count: 32, growth: 8 },
+        { name: "Nutrition", count: 28, growth: 15 },
+        { name: "Medical Advice", count: 24, growth: 5 },
+        { name: "Wellness Journey", count: 19, growth: 10 },
+        { name: "Support Group", count: 16, growth: 7 }
+      ]);
+    }
+  }, []);
+
+  const fetchSavedPosts = useCallback(async () => {
+    try {
+      const response = await axiosInstanceCommunityPortalService.get("/posts/saved");
+      setSavedPosts(response.data.map(post => post.postId));
+    } catch (error) {
+      console.error("Error fetching saved posts:", error);
+    }
+  }, []);
+
+  const fetchPosts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await axiosInstanceCommunityPortalService.get("/posts");
+      const postsWithDetailsPromises = response.data.map(async (post) => {
+        try {
+          const [voteCountResponse, commentsResponse] = await Promise.all([
+            axiosInstanceCommunityPortalService.get(`/posts/${post.postId}/votes/count`),
+            axiosInstanceCommunityPortalService.get(`/posts/${post.postId}/comments`)
+          ]);
+          
+          return {
+            ...post,
+            comments: commentsResponse.data,
+            upVoteCount: voteCountResponse.data.upVoteCount,
+            downVoteCount: voteCountResponse.data.downVoteCount,
+            engagementScore: (voteCountResponse.data.upVoteCount * 2) + commentsResponse.data.length,
+            category: post.category || "General",
+            tags: post.tags || [],
+            viewCount: post.viewCount || Math.floor(Math.random() * 100),
+            author: {
+              name: post.authorName || userProfile.name,
+              avatar: post.authorAvatar || userProfile.avatar
+            }
+          };
+        } catch (error) {
+          console.error(`Error fetching data for post ${post.postId}:`, error);
+          return { 
+            ...post, 
+            comments: [], 
+            upVoteCount: 0, 
+            downVoteCount: 0,
+            engagementScore: 0,
+            category: "General",
+            tags: [],
+            viewCount: 0,
+            author: {
+              name: userProfile.name,
+              avatar: userProfile.avatar
+            }
+          };
+        }
+      });
+      const postsWithDetails = await Promise.all(postsWithDetailsPromises);
+      setPosts(postsWithDetails);
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [userProfile.name, userProfile.avatar]);
+
+  const filterAndSortPosts = useCallback(() => {
+    let filtered = posts;
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(post => 
+        post.postTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        post.postContent.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        post.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+
+    // Filter by category
+    if (selectedCategory !== "All") {
+      filtered = filtered.filter(post => post.category === selectedCategory);
+    }
+
+    // Sort posts
+    switch (sortBy) {
+      case "newest":
+        filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        break;
+      case "oldest":
+        filtered.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        break;
+      case "popular":
+        filtered.sort((a, b) => b.engagementScore - a.engagementScore);
+        break;
+      case "mostCommented":
+        filtered.sort((a, b) => b.comments.length - a.comments.length);
+        break;
+      default:
+        break;
+    }
+
+    setFilteredPosts(filtered);
+  }, [posts, searchTerm, selectedCategory, sortBy]);
+
+  useEffect(() => {
+    fetchPosts();
+    fetchUserProfile();
+    fetchPopularTopics();
+    fetchSavedPosts();
+  }, [fetchPosts, fetchUserProfile, fetchPopularTopics, fetchSavedPosts]);
+
+  useEffect(() => {
+    filterAndSortPosts();
+  }, [posts, searchTerm, selectedCategory, sortBy, filterAndSortPosts]);
+
+  const handleCreatePost = async (postData) => {
+    try {
+      const formData = new FormData();
+      formData.append('postTitle', postData.postTitle);
+      formData.append('postContent', postData.postContent);
+      formData.append('category', postData.category);
+      formData.append('tags', JSON.stringify(postData.tags));
+      
+      if (postData.image) {
+        formData.append('image', postData.image);
+      }
+
+      await axiosInstanceCommunityPortalService.post("/posts/create", formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      setShowCreatePost(false);
+      fetchPosts();
+      toast.success("Post created successfully!");
+    } catch (error) {
+      console.error("Error creating post:", error);
+      toast.error(error.response?.data?.message || "Failed to create post.");
+    }
+  };
+
+  const handleCreateComment = async (postId) => {
+    const commentContent = newComment[postId] || "";
+    if (!commentContent.trim()) {
+      toast.error("Comment cannot be empty.");
+      return;
+    }
+    try {
+      await axiosInstanceCommunityPortalService.post("/comments/create", {
+        postId,
+        commentContent: commentContent.trim(),
+      });
+      setNewComment({ ...newComment, [postId]: "" });
+      fetchPosts();
+      toast.success("Comment added successfully!");
+    } catch (error) {
+      console.error("Error posting comment:", error);
+      toast.error(error.response?.data?.message || "Failed to post comment.");
+    }
+  };
+
+  const handleCommentChange = (postId, content) => {
+    setNewComment({ ...newComment, [postId]: content });
+  };
+
+  const handleVote = async (postId, voteType) => {
+    try {
+      await axiosInstanceCommunityPortalService.post("/posts/vote", {
+        postId,
+        voteType,
+      });
+      fetchPosts();
+      toast.success("Vote submitted successfully!");
+    } catch (error) {
+      console.error("Error voting on post:", error);
+      toast.error(error.response?.data?.message || "Failed to vote on post.");
+    }
+  };
+
+  const handleSavePost = async (postId) => {
+    try {
+      if (savedPosts.includes(postId)) {
+        await axiosInstanceCommunityPortalService.delete(`/posts/${postId}/save`);
+        setSavedPosts(savedPosts.filter(id => id !== postId));
+        toast.success("Post removed from saved!");
+      } else {
+        await axiosInstanceCommunityPortalService.post(`/posts/${postId}/save`);
+        setSavedPosts([...savedPosts, postId]);
+        toast.success("Post saved!");
+      }
+    } catch (error) {
+      console.error("Error saving post:", error);
+      toast.error("Failed to save post.");
+    }
+  };
+
+  const handleSharePost = async (postId) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'HMS Community Post',
+          url: `${window.location.origin}/community/post/${postId}`
+        });
+      } else {
+        await navigator.clipboard.writeText(`${window.location.origin}/community/post/${postId}`);
+        toast.success("Link copied to clipboard!");
+      }
+    } catch (error) {
+      console.error("Error sharing post:", error);
+    }
+  };
+
+  const formatTimeAgo = (dateString) => {
+    const now = new Date();
+    const postDate = new Date(dateString);
+    const diffInHours = Math.floor((now - postDate) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return "Just now";
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
+    return postDate.toLocaleDateString();
+  };
+
+  return (
+    <div className="flex bg-gray-50 min-h-screen">
+      <Sidebar />
+      
+      <div className="flex-1 p-6">
+        <Navbar />
+        
+        {/* Header Section */}
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center">
+              <FaFire className="text-orange-500 mr-3" />
+              HMS Community
+            </h1>
+            <p className="text-gray-600">Connect, share, and learn with fellow patients and health enthusiasts</p>
+          </div>
+
+          {/* Search and Filter Bar */}
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div className="flex flex-col md:flex-row gap-4 items-center">
+              <div className="flex-1 relative">
+                <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search posts, topics, or tags..."
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              <div className="flex gap-3 items-center">
+                <select
+                  className="px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                >
+                  {categories.map(category => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+                
+                <select
+                  className="px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                >
+                  <option value="newest">Newest</option>
+                  <option value="popular">Most Popular</option>
+                  <option value="mostCommented">Most Commented</option>
+                  <option value="oldest">Oldest</option>
+                </select>
+                
+                <button
+                  onClick={() => setShowCreatePost(true)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center gap-2 font-medium"
+                >
+                  <FaPaperPlane />
+                  Create Post
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Main Content */}
+            <div className="lg:col-span-3 space-y-6">
+              {/* Create Post Modal */}
+              <CreatePostModal
+                isOpen={showCreatePost}
+                onClose={() => setShowCreatePost(false)}
+                onSubmit={handleCreatePost}
+                categories={categories}
+              />
+
+              {/* Posts List */}
+              {loading ? (
+                <LoadingState />
+              ) : posts.length === 0 ? (
+                <EmptyState onCreatePost={() => setShowCreatePost(true)} />
+              ) : (
+                (filteredPosts.length > 0 ? filteredPosts : posts).map((post) => (
+                <div key={post.postId} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 slide-in">
+                  {/* Post Header */}
+                  <div className="p-6 border-b border-gray-100">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={post.author?.avatar || `https://ui-avatars.com/api/?name=${userProfile.name}&background=3b82f6&color=ffffff`}
+                          alt="Avatar"
+                          className="w-12 h-12 rounded-full object-cover"
+                        />
+                        <div>
+                          <h3 className="font-semibold text-gray-900">
+                            {post.author?.name || userProfile.name}
+                          </h3>
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <FaClock className="w-3 h-3" />
+                            {formatTimeAgo(post.createdAt)}
+                            <span className="mx-1">•</span>
+                            <span className="bg-gray-100 px-2 py-1 rounded-full text-xs">
+                              {post.category}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSavePost(post.postId)}
+                          className={`p-2 rounded-lg transition-colors ${
+                            savedPosts.includes(post.postId) 
+                              ? 'text-blue-600 bg-blue-50' 
+                              : 'text-gray-400 hover:text-gray-600'
+                          }`}
+                        >
+                          <FaBookmark />
+                        </button>
+                        <button
+                          onClick={() => handleSharePost(post.postId)}
+                          className="p-2 text-gray-400 hover:text-gray-600 rounded-lg transition-colors"
+                        >
+                          <FaShare />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Post Content */}
+                  <div className="p-6">
+                    <h2 className="text-xl font-bold text-gray-900 mb-3">{post.postTitle}</h2>
+                    <p className="text-gray-700 leading-relaxed mb-4">{post.postContent}</p>
+                    
+                    {post.tags && post.tags.length > 0 && (
+                      <div className="flex gap-2 flex-wrap mb-4">
+                        {post.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className="text-blue-600 text-sm hover:text-blue-800 cursor-pointer"
+                            onClick={() => setSearchTerm(tag)}
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Post Stats and Actions */}
+                  <div className="px-6 py-4 border-t border-gray-100">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-6 text-sm text-gray-500">
+                        <div className="flex items-center gap-1">
+                          <FaThumbsUp className="w-4 h-4" />
+                          {post.upVoteCount - post.downVoteCount} score
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <FaComment className="w-4 h-4" />
+                          {post.comments.length} comments
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <FaEye className="w-4 h-4" />
+                          {post.viewCount} views
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        {voteTypes.map((vote) => (
+                          <button
+                            key={vote.type}
+                            onClick={() => handleVote(post.postId, vote.type)}
+                            className={`vote-button flex items-center gap-1 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm border ${vote.color}`}
+                            title={vote.label}
+                          >
+                            <span className="text-lg">{vote.icon}</span>
+                            <span className="font-medium">
+                              {vote.type === "UP_VOTE" ? post.upVoteCount : post.downVoteCount}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Comments Section */}
+                  <div className="border-t border-gray-100">
+                    {post.comments.length > 0 && (
+                      <div className="p-6 space-y-4">
+                        {post.comments.slice(0, 3).map((comment) => (
+                          <div key={comment.commentId} className="flex gap-3">
+                            <img
+                              src={`https://ui-avatars.com/api/?name=User&background=94a3b8&color=ffffff`}
+                              alt="Commenter"
+                              className="w-8 h-8 rounded-full"
+                            />
+                            <div className="flex-1 bg-gray-50 rounded-lg p-3">
+                              <p className="text-gray-700">{comment.commentContent}</p>
+                              <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                                <span>{formatTimeAgo(comment.createdAt)}</span>
+                                <button className="hover:text-gray-700 flex items-center gap-1">
+                                  <FaReply className="w-3 h-3" />
+                                  Reply
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        {post.comments.length > 3 && (
+                          <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                            View all {post.comments.length} comments
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Add Comment */}
+                    <div className="p-6 border-t border-gray-100">
+                      <div className="flex gap-3">
+                        <img
+                          src={userProfile.avatar || `https://ui-avatars.com/api/?name=${userProfile.name}&background=3b82f6&color=ffffff`}
+                          alt="Your Avatar"
+                          className="w-8 h-8 rounded-full"
+                        />
+                        <div className="flex-1 flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Write a comment..."
+                            className="flex-1 px-4 py-2 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 comment-input"
+                            value={newComment[post.postId] || ""}
+                            onChange={(e) => handleCommentChange(post.postId, e.target.value)}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                handleCreateComment(post.postId);
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={() => handleCreateComment(post.postId)}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
+                          >
+                            <FaPaperPlane className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+              )}
+
+              {/* Show message when no results found */}
+              {!loading && posts.length > 0 && filteredPosts.length === 0 && (
+                <div className="text-center py-12 fade-in">
+                  <div className="text-gray-400 text-6xl mb-4">�</div>
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">No posts found</h3>
+                  <p className="text-gray-500 mb-6">
+                    No posts match your current filters. Try adjusting your search or category.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSearchTerm("");
+                      setSelectedCategory("All");
+                    }}
+                    className="text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Trending Topics */}
+              <TrendingWidget 
+                topics={popularTopics} 
+                onTopicClick={(topicName) => setSearchTerm(topicName)}
+              />
+
+              {/* Community Stats */}
+              <div className="bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-xl p-6">
+                <h3 className="text-lg font-bold mb-4">Community Stats</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span>Total Posts</span>
+                    <span className="font-bold">{posts.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Active Members</span>
+                    <span className="font-bold">2,847</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Today&apos;s Posts</span>
+                    <span className="font-bold">12</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Your Posts</span>
+                    <span className="font-bold">
+                      {posts.filter(post => post.author?.name === userProfile.name).length}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setShowCreatePost(true)}
+                    className="w-full flex items-center gap-3 p-3 text-left rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                  >
+                    <FaPaperPlane />
+                    Create Post
+                  </button>
+                  <button
+                    onClick={() => setSelectedCategory("Support")}
+                    className="w-full flex items-center gap-3 p-3 text-left rounded-lg hover:bg-green-50 hover:text-green-600 transition-colors"
+                  >
+                    <FaHeart />
+                    Find Support
+                  </button>
+                  <button
+                    onClick={() => setSearchTerm("health tips")}
+                    className="w-full flex items-center gap-3 p-3 text-left rounded-lg hover:bg-yellow-50 hover:text-yellow-600 transition-colors"
+                  >
+                    <FaTags />
+                    Health Tips
+                  </button>
+                  <button
+                    onClick={() => setSelectedCategory("Mental Health")}
+                    className="w-full flex items-center gap-3 p-3 text-left rounded-lg hover:bg-purple-50 hover:text-purple-600 transition-colors"
+                  >
+                    <FaHeart />
+                    Mental Health
+                  </button>
+                </div>
+              </div>
+
+              {/* Health Tips Widget */}
+              <div className="bg-green-50 rounded-xl p-6 border border-green-200">
+                <h3 className="text-lg font-bold text-green-800 mb-3 flex items-center gap-2">
+                  💡 Daily Health Tip
+                </h3>
+                <p className="text-green-700 text-sm leading-relaxed">
+                  Did you know? Drinking 8 glasses of water daily can improve your energy levels 
+                  and help maintain healthy skin. Stay hydrated! 💧
+                </p>
+                <button
+                  onClick={() => setSearchTerm("hydration")}
+                  className="mt-3 text-green-600 hover:text-green-800 text-sm font-medium"
+                >
+                  Learn more →
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Floating Action Button */}
+          <button
+            onClick={() => setShowCreatePost(true)}
+            className="floating-action flex items-center justify-center"
+            title="Create new post"
+          >
+            <FaPlus className="text-xl" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default HMSCommunity;

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Đặt lại mật khẩu</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        color: #333;
+        padding: 20px;
+        background-color: #ffffff;
+      }
+      .container {
+        max-width: 600px;
+        margin: auto;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 30px;
+      }
+      .button {
+        width: 100%;
+        text-align: center;
+      }
+      .btn {
+        display: inline-block;
+        padding: 12px 24px;
+        margin-top: 20px;
+        background-color: #00b894;
+        color: white;
+        font-weight: bold;
+        text-decoration: none;
+        border-radius: 6px;
+        width: max-content;
+      }
+      .btn:hover {
+        background-color: #016f59;
+      }
+
+      .footer {
+        margin-top: 40px;
+        font-size: 12px;
+        color: #888;
+        text-align: center;
+      }
+      .footer a {
+        color: #888;
+        text-decoration: none;
+      }
+      .bold {
+        font-weight: bold;
+      }
+
+      .buttonRestLink:hover {
+        background-color: darkblue;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Xác minh danh tính của bạn tại hệ thống HMS </h2>
+
+      <p>
+        <span class="bold"
+          >Chào <span th:text="${email}">[Tên Người Nhận]</span>,</span
+        >
+      </p>
+
+      <p>
+        Chúng tôi đã nhận được yêu cầu đặt lại mật khẩu cho tài khoản
+        <span th:text="${appName}">[Tên Ứng dụng]</span> của bạn. Vì lý do bảo
+        mật, vui lòng xác minh danh tính của bạn bằng cách nhấp vào nút bên
+        dưới:
+      </p>
+
+      <p class="bold">Liên kết đặt lại mật khẩu của bạn là:</p>
+
+      <div class="button">
+        <a th:href="${resetLink}" class="btn" style="cursor: pointer; color: white;">Đặt lại mật khẩu</a>
+      </div>
+
+      <p>
+        Liên kết này có hiệu lực trong
+        <span class="bold" th:text="${validTime}">15 phút</span>.
+      </p>
+
+      <p>
+        Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này. Mật khẩu
+        của bạn sẽ không thay đổi.
+      </p>
+
+      <p class="bold">Không chia sẻ liên kết này với bất kỳ ai.</p>
+
+      <p>Cảm ơn bạn đã sử dụng HMS.</p>
+
+      <p>Trân trọng</p>
+
+      <div class="footer">
+        <p>Email này không thể nhận phản hồi.</p>
+        <p>
+          Để biết thêm thông tin về
+          <span>HMS</span> và tài khoản của bạn, hãy truy cập
+          <a th:href="${appWebsite}" th:text="${appWebsite}">[Website]</a>.
+        </p>
+        <p>
+          Email này được gửi tới <span th:text="${email}">[Email Address]</span>
+        </p>
+        <p>
+          © <span th:text="${year}">2025</span> <span>HMS</span>. Bảo lưu mọi
+          quyền.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

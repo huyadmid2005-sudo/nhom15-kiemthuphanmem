@@ -1,0 +1,101 @@
+/* HMS Community Vote System Styles */
+
+.post-card {
+  transition: all 0.3s ease;
+  animation: slideInUp 0.5s ease-out;
+}
+
+.post-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.vote-button {
+  transition: all 0.2s ease;
+}
+
+.vote-button:hover {
+  transform: scale(1.05);
+}
+
+.vote-button:active {
+  transform: scale(0.95);
+}
+
+.comment-input {
+  transition: all 0.2s ease;
+}
+
+.comment-input:focus {
+  transform: translateY(-1px);
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Loading animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Vote score animation */
+@keyframes scoreUpdate {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+    color: #3b82f6;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.score-updated {
+  animation: scoreUpdate 0.3s ease-out;
+}
+
+/* Success notification */
+.success-notification {
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

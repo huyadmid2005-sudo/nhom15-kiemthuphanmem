@@ -1,0 +1,44 @@
+# ===== Environment secrets =====
+.env
+!.env.example
+
+# ===== Java / Maven =====
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+hs_err_pid*
+
+# ===== Gradle =====
+.gradle/
+build/
+
+# ===== IDE =====
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+*.swp
+*.swo
+*~
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Node / Frontend =====
+node_modules/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===== Docker =====
+*.pid

@@ -1,0 +1,11 @@
+.list {
+  display: flex;
+  min-height: 100vh;
+  background: #f0f9ff;
+
+  .homeContainer {
+    // background-color: lightblue;
+    flex: 1;
+    min-width: 0;
+  }
+}

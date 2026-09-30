@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thông báo phê duyệt truy cập dữ liệu</title>
+    <style>
+        /* ===== Base ===== */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff;
+            font-family: Arial, sans-serif;
+            color: #333333;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .wrapper {
+            width: 100%;
+            padding: 20px 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+        h1, h2, h3, h4 {
+            margin: 0 0 12px 0;
+        }
+        h2 {
+            font-size: 20px;
+        }
+        p {
+            margin: 0 0 12px 0;
+            line-height: 1.6;
+        }
+        .muted {
+            color: #666666;
+            font-size: 13px;
+        }
+
+        /* ===== Badge / Header ===== */
+        .brand {
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: bold;
+            font-size: 14px;
+            color: #00b894;
+        }
+        .title {
+            text-align: center;
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #555555;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        /* ===== Info Section ===== */
+        .panel {
+            border: 1px solid #eef2f3;
+            border-radius: 8px;
+            padding: 16px;
+            background: #fafafa;
+            margin: 16px 0;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 16px;
+        }
+        .label {
+            font-size: 12px;
+            color: #777777;
+        }
+        .value {
+            font-weight: bold;
+        }
+
+        /* ===== Buttons ===== */
+        .button {
+            text-align: center;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 8px 6px 0 6px;
+            background-color: #00b894;
+            color: #ffffff !important;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 6px;
+            width: max-content;
+        }
+        .btn:hover {
+            background-color: #019b7b;
+        }
+        .btn-outline {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 8px 6px 0 6px;
+            background-color: #ffffff;
+            color: #00b894 !important;
+            font-weight: bold;
+            text-decoration: none;
+            border: 1px solid #00b894;
+            border-radius: 6px;
+            width: max-content;
+        }
+        .btn-outline:hover {
+            background-color: #f4fffc;
+        }
+
+        /* ===== Lists ===== */
+        ul {
+            padding-left: 18px;
+            margin: 8px 0 0 0;
+        }
+        li {
+            margin-bottom: 6px;
+        }
+
+        /* ===== Footer ===== */
+        .footer {
+            margin-top: 32px;
+            font-size: 12px;
+            color: #888888;
+            text-align: center;
+        }
+        .footer a {
+            color: #888888;
+            text-decoration: none;
+        }
+
+        /* ===== Small helpers ===== */
+        .spacer-8 { height: 8px; }
+        .spacer-16 { height: 16px; }
+        .bold { font-weight: bold; }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <div class="container">
+        <!-- Brand / Header -->
+        <div class="brand" th:text="${appName}">[App Name]</div>
+        <h2 class="title">Yêu cầu truy cập dữ liệu của bạn đã được phê duyệt</h2>
+        <p class="subtitle">Mã yêu cầu: <span class="bold" th:text="${requestId}">REQ-00000</span></p>
+
+        <!-- Greeting -->
+        <p>
+            <span class="bold">Chào <span th:text="${recipientName}">[Tên nhà nghiên cứu]</span>,</span>
+        </p>
+        <p>
+            Chúc mừng! Đơn đăng ký truy cập dữ liệu y tế của bạn gửi tới
+            <span th:text="${appName}">[App Name]</span> đã được <span th:text="${approverName}">[Approver]</span> phê duyệt vào
+            <span th:text="${approvalDate}">[12/08/2025]</span>.
+        </p>
+
+        <!-- Quick summary -->
+        <div class="panel">
+            <div class="grid-2">
+                <div>
+                    <div class="label">Họ và tên</div>
+                    <div class="value" th:text="${fullName}">[Họ và tên]</div>
+                </div>
+                <div>
+                    <div class="label">Email</div>
+                    <div class="value" th:text="${email}">[email@example.com]</div>
+                </div>
+                <div>
+                    <div class="label">Chức danh/Học vị</div>
+                    <div class="value" th:text="${designation}">[Research Scientist]</div>
+                </div>
+                <div>
+                    <div class="label">Tổ chức/Đơn vị</div>
+                    <div class="value" th:text="${institution}">[Institution Name]</div>
+                </div>
+                <div>
+                    <div class="label">Phạm vi truy cập</div>
+                    <div class="value" th:text="${accessScope}">[Bộ dữ liệu / Bảng / API]</div>
+                </div>
+                <div>
+                    <div class="label">Ngày hết hạn quyền truy cập</div>
+                    <div class="value" th:text="${expiryDate}">[12/09/2025]</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Purpose & Security Notes -->
+        <h3 style="font-size:16px; margin-top:16px;">Tóm tắt mục tiêu & phương pháp nghiên cứu</h3>
+        <p th:text="${researchPurposeMethodology}">[Mục tiêu, phương pháp, kết quả kỳ vọng và cách sử dụng dữ liệu]</p>
+
+        <div class="spacer-8"></div>
+
+        <h3 style="font-size:16px;">Ghi chú bảo mật</h3>
+        <p th:text="${securityNotes}">[Biện pháp bảo mật, tuân thủ và các điều kiện kỹ thuật]</p>
+
+        <!-- Data Usage Agreement -->
+        <div class="panel">
+            <h3 style="font-size:16px; margin-bottom:6px;">Data Usage Agreement</h3>
+            <ul>
+                <li>Tất cả dữ liệu được ẩn danh và khử định danh.</li>
+                <li>Dữ liệu chỉ được dùng cho mục đích nghiên cứu đã nêu.</li>
+                <li>Không chia sẻ dữ liệu cho bên thứ ba nếu chưa có chấp thuận trước.</li>
+                <li>Kết quả nghiên cứu phải ghi nhận <span th:text="${dataAttribution}">[HMS/HIT]</span> là nguồn dữ liệu.</li>
+                <li>Dữ liệu phải được xóa an toàn sau khi hoàn tất nghiên cứu.</li>
+            </ul>
+            <p class="muted">Bằng cách truy cập cổng dữ liệu, bạn đồng ý tuân thủ các điều khoản trên.</p>
+        </div>
+        <!-- Attachment Notice -->
+        <div class="panel">
+            <h3 style="font-size:16px; margin-bottom:6px;">Thông tin đính kèm</h3>
+            <p>Tài liệu chi tiết quyền truy cập đã được đính kèm theo email này. Vui lòng tải xuống và làm theo hướng dẫn bên trong tệp đính kèm.</p>
+        </div>
+
+        <!-- Help -->
+        <div class="spacer-16"></div>
+        <p>
+            Nếu bạn gặp khó khăn khi đăng nhập hoặc truy cập dữ liệu, vui lòng liên hệ hỗ trợ tại
+            <a th:href="${'mailto:' + supportEmail}" th:text="${supportEmail}">support@example.com</a>.
+        </p>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Email này không nhận phản hồi trực tiếp.</p>
+            <p>
+                Tìm hiểu thêm về <span th:text="${appName}">[App Name]</span> và tài khoản của bạn tại
+                <a th:href="${appWebsite}" th:text="${appWebsite}">[Website]</a>.
+            </p>
+            <p>Email được gửi tới <span th:text="${email}">[Email Address]</span></p>
+            <p>© <span th:text="${year}">2025</span> <span th:text="${orgName}">[Tổ chức]</span>. Bảo lưu mọi quyền.</p>
+        </div>
+    </div>
+</div>
+</body>
+</html>
