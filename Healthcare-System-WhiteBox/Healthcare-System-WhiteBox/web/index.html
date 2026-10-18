@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Healthcare System - WhiteBox Edition</title>
+  <style>
+    *{box-sizing:border-box} body{margin:0;font-family:Arial,sans-serif;background:#f4f7fb;color:#1f2937}
+    header{background:#0f4c81;color:#fff;padding:24px} main{max-width:1100px;margin:auto;padding:24px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px}
+    .card{background:white;border-radius:12px;padding:18px;box-shadow:0 4px 16px #00000012}
+    button{background:#0f6ab4;color:#fff;border:0;border-radius:8px;padding:10px 14px;cursor:pointer}
+    button.secondary{background:#64748b} input,select{width:100%;padding:9px;margin:6px 0 12px;border:1px solid #cbd5e1;border-radius:8px}
+    table{width:100%;border-collapse:collapse} th,td{text-align:left;padding:8px;border-bottom:1px solid #e2e8f0}
+    .ok{color:#0a7a32}.err{color:#b42318} code{background:#eef2f7;padding:2px 5px;border-radius:5px}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Healthcare System – WhiteBox Edition</h1>
+  <p>Bản mới độc lập phục vụ bài tập lớn và kiểm thử hộp trắng.</p>
+</header>
+<main>
+  <div class="grid">
+    <section class="card">
+      <h2>Đặt lịch khám</h2>
+      <label>Patient ID</label>
+      <input id="patientId" value="P001">
+      <label>Appointment Type</label>
+      <select id="type">
+        <option value="IN_PERSON">In person</option>
+        <option value="TELEMEDICINE">Telemedicine</option>
+      </select>
+      <label>Slot</label>
+      <select id="slot"></select>
+      <button onclick="book()">Book appointment</button>
+      <p id="bookMsg"></p>
+    </section>
+    <section class="card">
+      <h2>Dữ liệu demo</h2>
+      <p><code>P001</code>: active</p>
+      <p><code>P002</code>: inactive</p>
+      <button class="secondary" onclick="loadAll()">Refresh</button>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Slot còn trống</h2>
+    <table><thead><tr><th>ID</th><th>Doctor</th><th>Date</th><th>Time</th></tr></thead><tbody id="slots"></tbody></table>
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Lịch của P001</h2>
+    <table><thead><tr><th>ID</th><th>Doctor</th><th>Type</th><th>Status</th><th></th></tr></thead><tbody id="appointments"></tbody></table>
+  </section>
+</main>
+<script>
+const api = async (url, options={}) => {
+  const r = await fetch(url, options);
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+  return data;
+};
+
+async function loadSlots(){
+  const rows = await api('/api/slots');
+  document.getElementById('slots').innerHTML = rows.map(s =>
+    `<tr><td>${s.id}</td><td>${s.doctorId}</td><td>${s.date}</td><td>${s.startTime}–${s.endTime}</td></tr>`).join('');
+  document.getElementById('slot').innerHTML = rows.map(s =>
+    `<option value="${s.id}">#${s.id} · ${s.doctorId} · ${s.date} ${s.startTime}</option>`).join('');
+}
+
+async function loadAppointments(){
+  const rows = await api('/api/appointments?patientId=P001');
+  document.getElementById('appointments').innerHTML = rows.map(a =>
+    `<tr><td>${a.id}</td><td>${a.doctorId}</td><td>${a.type}</td><td>${a.status}</td>
+    <td>${a.status==='BOOKED' ? `<button onclick="cancelAppt(${a.id})">Cancel</button>` : ''}</td></tr>`).join('');
+}
+
+async function book(){
+  const p = document.getElementById('patientId').value;
+  const slot = document.getElementById('slot').value;
+  const type = document.getElementById('type').value;
+  const msg = document.getElementById('bookMsg');
+  try{
+    const x = await api(`/api/book?patientId=${encodeURIComponent(p)}&slotId=${slot}&type=${type}`, {method:'POST'});
+    msg.className='ok'; msg.textContent='Booked appointment #' + x.appointmentId;
+    await loadAll();
+  }catch(e){ msg.className='err'; msg.textContent=e.message; }
+}
+
+async function cancelAppt(id){
+  try{ await api('/api/cancel?appointmentId=' + id, {method:'POST'}); await loadAll(); }
+  catch(e){ alert(e.message); }
+}
+
+async function loadAll(){ await loadSlots(); await loadAppointments(); }
+loadAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+[PASS] WB-01 createSlots_valid_createsTwoSlots
+[PASS] WB-02 createSlots_doctorMissing_throws
+[PASS] WB-03 createSlots_pastDate_throws
+[PASS] WB-04 createSlots_invalidTime_throws
+[PASS] WB-05 createSlots_zeroDuration_throws
+[PASS] WB-06 createSlots_durationExceedsWindow_throws
+[PASS] WB-07 createSlots_overlap_throws
+[PASS] WB-08 book_valid_success
+[PASS] WB-09 book_inactivePatient_throws
+[PASS] WB-10 book_slotNotFound_throws
+[PASS] WB-11 book_slotUnavailable_throws
+[PASS] WB-12 book_typeMissing_throws
+[PASS] WB-13 book_sameDoctorSameDay_throws
+[PASS] WB-14 cancel_valid_reopensSlot
+[PASS] WB-15 cancel_missingOrRepeated_throws
+
+========================================
+WHITE-BOX TEST SUMMARY
+Tests run: 15
+PASS:      15
+FAIL:      0
+Result:    PASS
+========================================
